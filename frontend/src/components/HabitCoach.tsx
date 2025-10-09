@@ -12,7 +12,12 @@ import {
   Heart,
   Brain,
   X,
-  Lightbulb
+  Lightbulb,
+  Check,
+  CheckSquare,
+  Square,
+  Sparkles,
+  Zap
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
@@ -54,6 +59,30 @@ interface ExistingHabit {
   notifications: boolean
 }
 
+interface HabitPlan {
+  id: string
+  name: string
+  description: string
+  color: string
+  icon: string
+  schedule: string[]
+  category: string
+  difficulty: 'easy' | 'medium' | 'hard'
+  timeRequired: string
+}
+
+interface DayPlan {
+  day: number
+  habits: string[]
+}
+
+interface AIPlan {
+  goal: string
+  habits: HabitPlan[]
+  schedule: DayPlan[]
+  totalDays: number
+}
+
 const HabitCoach = () => {
   const [existingHabits, setExistingHabits] = useState<ExistingHabit[]>([])
   const [messages, setMessages] = useState<Message[]>([])
@@ -61,38 +90,50 @@ const HabitCoach = () => {
   const [isTyping, setIsTyping] = useState(false)
   const [suggestedHabits, setSuggestedHabits] = useState<SuggestedHabit[]>([])
   const [showHabitTips, setShowHabitTips] = useState(false)
+  const [currentMode, setCurrentMode] = useState<'chat' | 'planner'>('chat')
+  const [aiPlan, setAiPlan] = useState<AIPlan | null>(null)
+  const [selectedHabits, setSelectedHabits] = useState<string[]>([])
+  const [showPlanCalendar, setShowPlanCalendar] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const goalCategories: GoalCategory[] = [
     {
       id: 'health',
-      name: 'Health',
+      name: 'Здоровье',
       emoji: '🏃',
-      description: 'Physical fitness, nutrition, and wellness'
+      description: 'Физическая активность, питание и здоровый образ жизни'
     },
     {
       id: 'productivity',
-      name: 'Productivity',
+      name: 'Продуктивность',
       emoji: '💻',
-      description: 'Work efficiency, time management, and focus'
+      description: 'Эффективность работы, управление временем и концентрация'
     },
     {
       id: 'balance',
-      name: 'Balance',
+      name: 'Баланс',
       emoji: '⚖️',
-      description: 'Work-life balance, stress management, and mindfulness'
+      description: 'Работа и личная жизнь, управление стрессом и осознанность'
     }
   ]
 
-  const generateInitialMessage = (existingHabits: ExistingHabit[]): string => {
-    let baseMessage = "🤖 Hello! I'm your AI habit coach. I'm here to help you build better habits and achieve your goals."
+  const generateInitialMessage = (existingHabits: ExistingHabit[], mode: 'chat' | 'planner'): string => {
+    let baseMessage = mode === 'planner' 
+      ? "🤖 Привет! Я ваш AI-планировщик привычек. Я создам для вас персональный 30-дневный план с оптимальным расписанием привычек."
+      : "🤖 Привет! Я ваш ИИ-тренер по привычкам. Я здесь, чтобы помочь вам выработать лучшие привычки и достичь ваших целей."
     
     if (existingHabits.length > 0) {
       const habitExamples = existingHabits.slice(0, 3).map(habit => `'${habit.name}'`).join(', ')
-      baseMessage += ` I can see you already have some great habits like ${habitExamples}. Would you like to add similar ones or explore different areas?`
+      baseMessage += ` Я вижу, что у вас уже есть отличные привычки, такие как ${habitExamples}.`
+      
+      if (mode === 'planner') {
+        baseMessage += " Новый план идеально дополнит вашу существующую рутину."
+      } else {
+        baseMessage += " Хотите добавить похожие или изучить другие области?"
+      }
     }
     
-    baseMessage += " Let's start by selecting a goal category that interests you the most:"
+    baseMessage += " Давайте начнем с выбора категории целей, которая вас больше всего интересует:"
     return baseMessage
   }
 
@@ -105,7 +146,7 @@ const HabitCoach = () => {
       const initialMessage: Message = {
         id: '1',
         type: 'assistant',
-        content: generateInitialMessage(habits),
+        content: generateInitialMessage(habits, currentMode),
         timestamp: new Date(),
         showGoalSelection: true
       }
@@ -114,13 +155,13 @@ const HabitCoach = () => {
       const initialMessage: Message = {
         id: '1',
         type: 'assistant',
-        content: generateInitialMessage([]),
+        content: generateInitialMessage([], currentMode),
         timestamp: new Date(),
         showGoalSelection: true
       }
       setMessages([initialMessage])
     }
-  }, [])
+  }, [currentMode])
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -135,93 +176,263 @@ const HabitCoach = () => {
       health: [
         {
           id: 'h1',
-          name: 'Morning Workout',
-          description: 'Start your day with 30 minutes of exercise',
-          category: 'Health',
+          name: 'Утренняя зарядка',
+          description: 'Начните день с 30 минут физических упражнений',
+          category: 'Здоровье',
           icon: '💪',
           difficulty: 'medium',
-          timeRequired: '30 min'
+          timeRequired: '30 мин'
         },
         {
           id: 'h2',
-          name: 'Daily Steps',
-          description: 'Walk 10,000 steps every day',
-          category: 'Health',
+          name: 'Ежедневные шаги',
+          description: 'Проходите 10,000 шагов каждый день',
+          category: 'Здоровье',
           icon: '🚶',
           difficulty: 'easy',
-          timeRequired: '45 min'
+          timeRequired: '45 мин'
         },
         {
           id: 'h3',
-          name: 'Drink Water',
-          description: 'Drink 8 glasses of water daily',
-          category: 'Health',
+          name: 'Пить воду',
+          description: 'Выпивайте 8 стаканов воды ежедневно',
+          category: 'Здоровье',
           icon: '💧',
           difficulty: 'easy',
-          timeRequired: '2 min'
+          timeRequired: '2 мин'
         }
       ],
       productivity: [
         {
           id: 'p1',
-          name: 'Deep Work Sessions',
-          description: 'Focus on important tasks for 2 hours daily',
-          category: 'Productivity',
+          name: 'Глубокие рабочие сессии',
+          description: 'Сосредоточьтесь на важных задачах 2 часа в день',
+          category: 'Продуктивность',
           icon: '🎯',
           difficulty: 'medium',
-          timeRequired: '2 hours'
+          timeRequired: '2 часа'
         },
         {
           id: 'p2',
-          name: 'Daily Planning',
-          description: 'Plan your day every morning',
-          category: 'Productivity',
+          name: 'Ежедневное планирование',
+          description: 'Планируйте свой день каждое утро',
+          category: 'Продуктивность',
           icon: '📋',
           difficulty: 'easy',
-          timeRequired: '10 min'
+          timeRequired: '10 мин'
         },
         {
           id: 'p3',
-          name: 'Email Time Blocks',
-          description: 'Check emails only at specific times',
-          category: 'Productivity',
+          name: 'Временные блоки для email',
+          description: 'Проверяйте почту только в определенное время',
+          category: 'Продуктивность',
           icon: '📧',
           difficulty: 'medium',
-          timeRequired: '30 min'
+          timeRequired: '30 мин'
         }
       ],
       balance: [
         {
           id: 'b1',
-          name: 'Daily Meditation',
-          description: 'Meditate for 10 minutes each morning',
-          category: 'Balance',
+          name: 'Ежедневная медитация',
+          description: 'Медитируйте 10 минут каждое утро',
+          category: 'Баланс',
           icon: '🧘',
           difficulty: 'easy',
-          timeRequired: '10 min'
+          timeRequired: '10 мин'
         },
         {
           id: 'b2',
-          name: 'Gratitude Journal',
-          description: 'Write down 3 things you\'re grateful for',
-          category: 'Balance',
+          name: 'Дневник благодарности',
+          description: 'Записывайте 3 вещи, за которые благодарны',
+          category: 'Баланс',
           icon: '📝',
           difficulty: 'easy',
-          timeRequired: '5 min'
+          timeRequired: '5 мин'
         },
         {
           id: 'b3',
-          name: 'Digital Detox',
-          description: 'No screens 1 hour before bedtime',
-          category: 'Balance',
+          name: 'Цифровой детокс',
+          description: 'Никаких экранов за 1 час до сна',
+          category: 'Баланс',
           icon: '📱',
           difficulty: 'hard',
-          timeRequired: '1 hour'
+          timeRequired: '1 час'
         }
       ]
     }
     
     return habitSuggestions[goalCategory] || []
+  }
+
+  const generateAIPlan = (goalCategory: string): AIPlan => {
+    const habitPlans: Record<string, HabitPlan[]> = {
+      health: [
+        {
+          id: 'hp1',
+          name: 'Утренняя зарядка',
+          description: '30 минут физических упражнений',
+          color: 'bg-green-500',
+          icon: '💪',
+          schedule: ['daily'],
+          category: 'Здоровье',
+          difficulty: 'medium',
+          timeRequired: '30 мин'
+        },
+        {
+          id: 'hp2',
+          name: 'Медитация',
+          description: '10 минут осознанности',
+          color: 'bg-blue-500',
+          icon: '🧘',
+          schedule: ['Пн', 'Ср', 'Пт'],
+          category: 'Здоровье',
+          difficulty: 'easy',
+          timeRequired: '10 мин'
+        },
+        {
+          id: 'hp3',
+          name: 'Здоровое питание',
+          description: 'Сбалансированные приемы пищи',
+          color: 'bg-orange-500',
+          icon: '🥗',
+          schedule: ['daily'],
+          category: 'Здоровье',
+          difficulty: 'medium',
+          timeRequired: '15 мин'
+        },
+        {
+          id: 'hp4',
+          name: 'Дневник здоровья',
+          description: 'Запись самочувствия и активности',
+          color: 'bg-purple-500',
+          icon: '📝',
+          schedule: ['воскресенье'],
+          category: 'Здоровье',
+          difficulty: 'easy',
+          timeRequired: '5 мин'
+        }
+      ],
+      productivity: [
+        {
+          id: 'pp1',
+          name: 'Глубокие рабочие сессии',
+          description: '2 часа фокусированной работы',
+          color: 'bg-indigo-500',
+          icon: '🎯',
+          schedule: ['daily'],
+          category: 'Продуктивность',
+          difficulty: 'hard',
+          timeRequired: '2 часа'
+        },
+        {
+          id: 'pp2',
+          name: 'Ежедневное планирование',
+          description: 'Планирование дня и приоритетов',
+          color: 'bg-yellow-500',
+          icon: '📋',
+          schedule: ['daily'],
+          category: 'Продуктивность',
+          difficulty: 'easy',
+          timeRequired: '10 мин'
+        },
+        {
+          id: 'pp3',
+          name: 'Изучение нового',
+          description: '30 минут обучения и развития',
+          color: 'bg-teal-500',
+          icon: '📚',
+          schedule: ['Пн', 'Вт', 'Чт', 'Пт'],
+          category: 'Продуктивность',
+          difficulty: 'medium',
+          timeRequired: '30 мин'
+        },
+        {
+          id: 'pp4',
+          name: 'Анализ недели',
+          description: 'Подведение итогов и планирование',
+          color: 'bg-pink-500',
+          icon: '📊',
+          schedule: ['воскресенье'],
+          category: 'Продуктивность',
+          difficulty: 'medium',
+          timeRequired: '20 мин'
+        }
+      ],
+      balance: [
+        {
+          id: 'bp1',
+          name: 'Медитация',
+          description: '10 минут осознанности',
+          color: 'bg-blue-500',
+          icon: '🧘',
+          schedule: ['daily'],
+          category: 'Баланс',
+          difficulty: 'easy',
+          timeRequired: '10 мин'
+        },
+        {
+          id: 'bp2',
+          name: 'Дневник благодарности',
+          description: 'Запись благодарностей',
+          color: 'bg-green-500',
+          icon: '🙏',
+          schedule: ['daily'],
+          category: 'Баланс',
+          difficulty: 'easy',
+          timeRequired: '5 мин'
+        },
+        {
+          id: 'bp3',
+          name: 'Цифровой детокс',
+          description: 'Отдых от экранов',
+          color: 'bg-red-500',
+          icon: '📱',
+          schedule: ['Сб', 'воскресенье'],
+          category: 'Баланс',
+          difficulty: 'hard',
+          timeRequired: '2 часа'
+        },
+        {
+          id: 'bp4',
+          name: 'Природа и свежий воздух',
+          description: 'Прогулка на свежем воздухе',
+          color: 'bg-emerald-500',
+          icon: '🌳',
+          schedule: ['Сб', 'воскресенье'],
+          category: 'Баланс',
+          difficulty: 'easy',
+          timeRequired: '30 мин'
+        }
+      ]
+    }
+
+    const habits = habitPlans[goalCategory] || []
+    const schedule: DayPlan[] = []
+    
+    for (let day = 1; day <= 30; day++) {
+      const dayHabits: string[] = []
+      
+      habits.forEach(habit => {
+        if (habit.schedule.includes('daily')) {
+          dayHabits.push(habit.id)
+        } else {
+          const dayOfWeek = ['воскресенье', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'][day % 7]
+          if (habit.schedule.includes(dayOfWeek)) {
+            dayHabits.push(habit.id)
+          }
+        }
+      })
+      
+      schedule.push({ day, habits: dayHabits })
+    }
+
+    return {
+      goal: goalCategory,
+      habits,
+      schedule,
+      totalDays: 30
+    }
   }
 
   const handleGoalSelection = (goalId: string) => {
@@ -239,39 +450,56 @@ const HabitCoach = () => {
       setIsTyping(true)
       
       setTimeout(() => {
-        const suggestions = generateSuggestedHabits(goalId)
-        setSuggestedHabits(suggestions)
-        
-        let responseContent = `🤖 Great choice! I've prepared some ${selectedCategory.name.toLowerCase()} habit suggestions for you. These habits are designed to help you achieve better ${selectedCategory.description.toLowerCase()}.`
-        
-        // Mention existing habits if any match the selected category
-        if (existingHabits.length > 0) {
-          const categoryKeywords: Record<string, string[]> = {
-            health: ['exercise', 'workout', 'water', 'sleep', 'run', 'walk', 'fitness'],
-            productivity: ['work', 'plan', 'focus', 'study', 'read', 'write'],
-            balance: ['meditat', 'journal', 'relax', 'gratitude', 'mindful']
+        if (currentMode === 'planner') {
+          const plan = generateAIPlan(goalId)
+          setAiPlan(plan)
+          setShowPlanCalendar(true)
+          
+          const responseContent = `🤖 Отлично! Я создал для вас персональный 30-дневный план привычек в категории "${selectedCategory.name.toLowerCase()}". Этот план включает ${plan.habits.length} привычек с оптимальным расписанием для достижения ваших целей.`
+          
+          const assistantMessage: Message = {
+            id: (Date.now() + 1).toString(),
+            type: 'assistant',
+            content: responseContent,
+            timestamp: new Date()
           }
           
-          const keywords = categoryKeywords[goalId] || []
-          const relatedHabits = existingHabits.filter(habit => 
-            keywords.some(keyword => habit.name.toLowerCase().includes(keyword))
-          )
+          setMessages(prev => [...prev, assistantMessage])
+        } else {
+          const suggestions = generateSuggestedHabits(goalId)
+          setSuggestedHabits(suggestions)
           
-          if (relatedHabits.length > 0) {
-            responseContent += ` I notice you already have similar habits like '${relatedHabits[0].name}' - that's awesome! These new suggestions will complement your existing routine perfectly.`
+          let responseContent = `🤖 Отличный выбор! Я подготовил для вас несколько предложений по привычкам в категории "${selectedCategory.name.toLowerCase()}". Эти привычки помогут вам достичь лучшего ${selectedCategory.description.toLowerCase()}.`
+          
+          if (existingHabits.length > 0) {
+            const categoryKeywords: Record<string, string[]> = {
+              health: ['exercise', 'workout', 'water', 'sleep', 'run', 'walk', 'fitness'],
+              productivity: ['work', 'plan', 'focus', 'study', 'read', 'write'],
+              balance: ['meditat', 'journal', 'relax', 'gratitude', 'mindful']
+            }
+            
+            const keywords = categoryKeywords[goalId] || []
+            const relatedHabits = existingHabits.filter(habit => 
+              keywords.some(keyword => habit.name.toLowerCase().includes(keyword))
+            )
+            
+            if (relatedHabits.length > 0) {
+              responseContent += ` Я заметил, что у вас уже есть похожие привычки, такие как '${relatedHabits[0].name}' - это замечательно! Эти новые предложения идеально дополнят вашу существующую рутину.`
+            }
           }
+          
+          responseContent += ' Выберите те, которые вам подходят:'
+          
+          const assistantMessage: Message = {
+            id: (Date.now() + 1).toString(),
+            type: 'assistant',
+            content: responseContent,
+            timestamp: new Date()
+          }
+          
+          setMessages(prev => [...prev, assistantMessage])
         }
         
-        responseContent += ' Choose any that resonate with you:'
-        
-        const assistantMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          type: 'assistant',
-          content: responseContent,
-          timestamp: new Date()
-        }
-        
-        setMessages(prev => [...prev, assistantMessage])
         setIsTyping(false)
       }, 1500)
     }
@@ -295,7 +523,7 @@ const HabitCoach = () => {
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         type: 'assistant',
-        content: "🤖 That's interesting! I'd love to help you build better habits. Feel free to ask me anything about habit formation, or we can explore more specific areas if you'd like.",
+        content: "🤖 Это интересно! Я буду рад помочь вам выработать лучшие привычки. Спрашивайте меня о чем угодно, связанном с формированием привычек, или мы можем изучить более конкретные области, если хотите.",
         timestamp: new Date()
       }
 
@@ -325,7 +553,7 @@ const HabitCoach = () => {
     const confirmationMessage: Message = {
       id: Date.now().toString(),
       type: 'assistant',
-      content: `🤖 Excellent choice! I've added "${habit.name}" to your habits dashboard. This is a ${habit.difficulty} habit that will take about ${habit.timeRequired} each day. You can now track it in your Dashboard (/app). Would you like to add another habit?`,
+      content: `🤖 Отличный выбор! Я добавил "${habit.name}" в вашу панель привычек. Это ${habit.difficulty === 'easy' ? 'легкая' : habit.difficulty === 'medium' ? 'средняя' : 'сложная'} привычка, которая займет около ${habit.timeRequired} каждый день. Теперь вы можете отслеживать её в своей панели (/app). Хотите добавить еще одну привычку?`,
       timestamp: new Date()
     }
     
@@ -343,6 +571,81 @@ const HabitCoach = () => {
     }
   }
 
+  const handleHabitSelection = (habitId: string) => {
+    setSelectedHabits(prev => 
+      prev.includes(habitId) 
+        ? prev.filter(id => id !== habitId)
+        : [...prev, habitId]
+    )
+  }
+
+  const handleAcceptAllHabits = () => {
+    if (!aiPlan) return
+    
+    const existingHabits = JSON.parse(localStorage.getItem('habits') || '[]')
+    const newHabits = aiPlan.habits.map(habit => ({
+      id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+      name: habit.name,
+      description: habit.description,
+      streak: 0,
+      completed: false,
+      createdAt: new Date().toISOString(),
+      habitType: 'good' as const,
+      frequency: habit.schedule.includes('daily') ? 'daily' as const : 'weekly' as const,
+      reminder: '',
+      notifications: true
+    }))
+    
+    const updatedHabits = [...existingHabits, ...newHabits]
+    localStorage.setItem('habits', JSON.stringify(updatedHabits))
+    
+    const confirmationMessage: Message = {
+      id: Date.now().toString(),
+      type: 'assistant',
+      content: `🤖 Отлично! Я добавил все ${aiPlan.habits.length} привычек в ваш Dashboard. Теперь вы можете отслеживать их выполнение в разделе "Мои привычки" (/app). Удачи в достижении ваших целей!`,
+      timestamp: new Date()
+    }
+    
+    setMessages(prev => [...prev, confirmationMessage])
+    setAiPlan(null)
+    setShowPlanCalendar(false)
+  }
+
+  const handleAcceptSelectedHabits = () => {
+    if (!aiPlan || selectedHabits.length === 0) return
+    
+    const existingHabits = JSON.parse(localStorage.getItem('habits') || '[]')
+    const newHabits = aiPlan.habits
+      .filter(habit => selectedHabits.includes(habit.id))
+      .map(habit => ({
+        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+        name: habit.name,
+        description: habit.description,
+        streak: 0,
+        completed: false,
+        createdAt: new Date().toISOString(),
+        habitType: 'good' as const,
+        frequency: habit.schedule.includes('daily') ? 'daily' as const : 'weekly' as const,
+        reminder: '',
+        notifications: true
+      }))
+    
+    const updatedHabits = [...existingHabits, ...newHabits]
+    localStorage.setItem('habits', JSON.stringify(updatedHabits))
+    
+    const confirmationMessage: Message = {
+      id: Date.now().toString(),
+      type: 'assistant',
+      content: `🤖 Отлично! Я добавил ${selectedHabits.length} выбранных привычек в ваш Dashboard. Теперь вы можете отслеживать их выполнение в разделе "Мои привычки" (/app). Удачи в достижении ваших целей!`,
+      timestamp: new Date()
+    }
+    
+    setMessages(prev => [...prev, confirmationMessage])
+    setAiPlan(null)
+    setShowPlanCalendar(false)
+    setSelectedHabits([])
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex">
       <motion.div 
@@ -357,26 +660,48 @@ const HabitCoach = () => {
               <Bot className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h3 className="font-semibold text-gray-900">AI Habit Coach</h3>
-              <p className="text-sm text-gray-500">Your personal guide</p>
+              <h3 className="font-semibold text-gray-900">ИИ-тренер по привычкам</h3>
+              <p className="text-sm text-gray-500">Ваш личный помощник</p>
             </div>
           </div>
         </div>
 
         <div className="p-6 space-y-4">
           <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
-            Quick Actions
+            Режимы работы
+          </h4>
+          <div className="space-y-2">
+            <Button 
+              variant={currentMode === 'chat' ? 'default' : 'outline'} 
+              className="w-full justify-start"
+              onClick={() => setCurrentMode('chat')}
+            >
+              <Bot className="w-4 h-4 mr-2" />
+              Чат с ИИ
+            </Button>
+            <Button 
+              variant={currentMode === 'planner' ? 'default' : 'outline'} 
+              className="w-full justify-start"
+              onClick={() => setCurrentMode('planner')}
+            >
+              <Sparkles className="w-4 h-4 mr-2" />
+              AI-планировщик
+            </Button>
+          </div>
+          
+          <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mt-6">
+            Быстрые действия
           </h4>
           <div className="space-y-2">
             <Button variant="outline" className="w-full justify-start" asChild>
               <Link to="/habits">
                 <Target className="w-4 h-4 mr-2" />
-                View My Habits
+                Мои привычки
               </Link>
             </Button>
             <Button variant="outline" className="w-full justify-start">
               <Heart className="w-4 h-4 mr-2" />
-              My Progress
+              Мой прогресс
             </Button>
             <Button 
               variant="outline" 
@@ -384,7 +709,7 @@ const HabitCoach = () => {
               onClick={() => setShowHabitTips(true)}
             >
               <Brain className="w-4 h-4 mr-2" />
-              Habit Tips
+              Советы по привычкам
             </Button>
           </div>
         </div>
@@ -392,7 +717,7 @@ const HabitCoach = () => {
         {suggestedHabits.length > 0 && (
           <div className="p-6 border-t border-gray-200">
             <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
-              Suggested Habits
+              Предлагаемые привычки
             </h4>
             <div className="space-y-2">
               {suggestedHabits.map((habit) => (
@@ -418,7 +743,7 @@ const HabitCoach = () => {
           <Button variant="outline" className="w-full" asChild>
             <Link to="/">
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Home
+              На главную
             </Link>
           </Button>
         </div>
@@ -436,14 +761,16 @@ const HabitCoach = () => {
               <Button variant="outline" size="sm" asChild>
                 <Link to="/">
                   <ArrowLeft className="w-4 h-4 mr-2" />
-                  Back to Home
+                  На главную
                 </Link>
               </Button>
-              <h1 className="text-xl font-semibold text-gray-900">AI Habit Coach</h1>
+              <h1 className="text-xl font-semibold text-gray-900">
+                {currentMode === 'planner' ? 'AI-планировщик привычек' : 'ИИ-тренер по привычкам'}
+              </h1>
             </div>
             <div className="flex items-center gap-2 text-sm text-gray-500">
               <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              Online
+              Онлайн
             </div>
           </div>
         </motion.header>
@@ -539,7 +866,7 @@ const HabitCoach = () => {
             animate={{ y: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Suggested Habits</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Предлагаемые привычки</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {suggestedHabits.map((habit) => (
                 <motion.div
@@ -576,7 +903,7 @@ const HabitCoach = () => {
                       className="bg-blue-500 hover:bg-blue-600"
                     >
                       <Plus className="w-3 h-3 mr-1" />
-                      Add to my habits
+                      Добавить в мои привычки
                     </Button>
                   </div>
                 </motion.div>
@@ -592,7 +919,7 @@ const HabitCoach = () => {
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-              placeholder="Ask me anything about building habits..."
+              placeholder="Спросите меня о чем угодно, связанном с формированием привычек..."
               className="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
             />
             <Button 
@@ -626,7 +953,7 @@ const HabitCoach = () => {
                 <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
                   <Lightbulb className="w-5 h-5 text-white" />
                 </div>
-                <h3 className="text-xl font-semibold text-gray-900">Habit Building Tips</h3>
+                <h3 className="text-xl font-semibold text-gray-900">Советы по формированию привычек</h3>
               </div>
               <Button 
                 variant="outline" 
@@ -644,10 +971,10 @@ const HabitCoach = () => {
                     <span className="text-white font-bold">1</span>
                   </div>
                   <div>
-                    <h4 className="text-lg font-semibold text-green-800 mb-2">Start Small</h4>
+                    <h4 className="text-lg font-semibold text-green-800 mb-2">Начните с малого</h4>
                     <p className="text-green-700">
-                      Begin with tiny habits that take less than 2 minutes. Want to read more? Start with just one page a day. 
-                      Small wins build momentum and make habits stick easier.
+                      Начните с крошечных привычек, которые занимают менее 2 минут. Хотите читать больше? Начните с одной страницы в день. 
+                      Маленькие победы создают импульс и помогают привычкам закрепиться.
                     </p>
                   </div>
                 </div>
@@ -659,10 +986,10 @@ const HabitCoach = () => {
                     <span className="text-white font-bold">2</span>
                   </div>
                   <div>
-                    <h4 className="text-lg font-semibold text-blue-800 mb-2">Stack Your Habits</h4>
+                    <h4 className="text-lg font-semibold text-blue-800 mb-2">Складывайте привычки</h4>
                     <p className="text-blue-700">
-                      Link new habits to existing routines. "After I pour my morning coffee, I will write down one thing I'm grateful for." 
-                      This creates automatic triggers for your new habits.
+                      Связывайте новые привычки с существующими рутинами. "После того, как я налью утренний кофе, я запишу одну вещь, за которую благодарен." 
+                      Это создает автоматические триггеры для ваших новых привычек.
                     </p>
                   </div>
                 </div>
@@ -674,10 +1001,10 @@ const HabitCoach = () => {
                     <span className="text-white font-bold">3</span>
                   </div>
                   <div>
-                    <h4 className="text-lg font-semibold text-purple-800 mb-2">Design Your Environment</h4>
+                    <h4 className="text-lg font-semibold text-purple-800 mb-2">Создайте правильную среду</h4>
                     <p className="text-purple-700">
-                      Make good habits obvious and bad habits invisible. Put your workout clothes next to your bed. 
-                      Hide your phone to avoid endless scrolling. Your environment shapes your behavior.
+                      Сделайте хорошие привычки очевидными, а плохие - незаметными. Положите спортивную одежду рядом с кроватью. 
+                      Спрячьте телефон, чтобы избежать бесконечного скроллинга. Ваша среда формирует ваше поведение.
                     </p>
                   </div>
                 </div>
@@ -689,10 +1016,10 @@ const HabitCoach = () => {
                     <span className="text-white font-bold">4</span>
                   </div>
                   <div>
-                    <h4 className="text-lg font-semibold text-orange-800 mb-2">Focus on Identity</h4>
+                    <h4 className="text-lg font-semibold text-orange-800 mb-2">Фокусируйтесь на идентичности</h4>
                     <p className="text-orange-700">
-                      Don't just set goals, become the type of person who does these things. Instead of "I want to run a marathon," 
-                      think "I am a runner." Every action is a vote for the person you want to become.
+                      Не просто ставьте цели, станьте тем типом человека, который делает эти вещи. Вместо "Я хочу пробежать марафон" 
+                      думайте "Я бегун." Каждое действие - это голос за человека, которым вы хотите стать.
                     </p>
                   </div>
                 </div>
@@ -704,7 +1031,163 @@ const HabitCoach = () => {
                 onClick={() => setShowHabitTips(false)}
                 className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
               >
-                Got it! Let's build some habits
+                Понятно! Давайте создадим несколько привычек
+              </Button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+
+      {showPlanCalendar && aiPlan && (
+        <motion.div 
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={() => {
+            setShowPlanCalendar(false)
+            setAiPlan(null)
+            setSelectedHabits([])
+          }}
+        >
+          <motion.div 
+            className="bg-white rounded-2xl w-full max-w-6xl max-h-[90vh] overflow-y-auto p-6"
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.9, opacity: 0 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
+                  <Sparkles className="w-5 h-5 text-white" />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900">Ваш персональный план на 30 дней</h3>
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => {
+                  setShowPlanCalendar(false)
+                  setAiPlan(null)
+                  setSelectedHabits([])
+                }}
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+
+            <div className="mb-6 p-4 bg-gray-50 rounded-xl">
+              <h4 className="text-sm font-semibold text-gray-700 mb-3">Легенда привычек:</h4>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {aiPlan.habits.map((habit) => (
+                  <div key={habit.id} className="flex items-center gap-2">
+                    <div className={`w-4 h-4 rounded-full ${habit.color}`}></div>
+                    <span className="text-sm text-gray-600">{habit.name}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="mb-6">
+              <h4 className="text-lg font-semibold text-gray-900 mb-4">Календарь на 30 дней</h4>
+              <div className="grid grid-cols-7 gap-2">
+                {['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].map(day => (
+                  <div key={day} className="text-center text-sm font-medium text-gray-500 p-2">
+                    {day}
+                  </div>
+                ))}
+                {aiPlan.schedule.map((dayPlan) => (
+                  <motion.div
+                    key={dayPlan.day}
+                    className="aspect-square border border-gray-200 rounded-lg p-2 relative"
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: dayPlan.day * 0.01 }}
+                  >
+                    <div className="text-xs font-medium text-gray-600 mb-1">
+                      {dayPlan.day}
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {dayPlan.habits.map((habitId) => {
+                        const habit = aiPlan.habits.find(h => h.id === habitId)
+                        return habit ? (
+                          <div
+                            key={habitId}
+                            className={`w-2 h-2 rounded-full ${habit.color}`}
+                            title={habit.name}
+                          />
+                        ) : null
+                      })}
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+
+            <div className="mb-6">
+              <h4 className="text-lg font-semibold text-gray-900 mb-4">Привычки в плане:</h4>
+              <div className="space-y-3">
+                {aiPlan.habits.map((habit) => (
+                  <motion.div
+                    key={habit.id}
+                    className={`p-4 border rounded-xl cursor-pointer transition-all ${
+                      selectedHabits.includes(habit.id)
+                        ? 'border-blue-500 bg-blue-50'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                    onClick={() => handleHabitSelection(habit.id)}
+                    whileHover={{ scale: 1.02 }}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2">
+                        {selectedHabits.includes(habit.id) ? (
+                          <CheckSquare className="w-5 h-5 text-blue-500" />
+                        ) : (
+                          <Square className="w-5 h-5 text-gray-400" />
+                        )}
+                        <span className="text-lg">{habit.icon}</span>
+                      </div>
+                      <div className="flex-1">
+                        <h5 className="font-semibold text-gray-900">{habit.name}</h5>
+                        <p className="text-sm text-gray-600">{habit.description}</p>
+                        <div className="flex items-center gap-4 mt-2">
+                          <span className="text-xs text-gray-500">
+                            Расписание: {habit.schedule.join(', ')}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            Время: {habit.timeRequired}
+                          </span>
+                          <span className={`text-xs px-2 py-1 rounded-full ${getDifficultyColor(habit.difficulty)}`}>
+                            {habit.difficulty}
+                          </span>
+                        </div>
+                      </div>
+                      <div className={`w-4 h-4 rounded-full ${habit.color}`}></div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-6 border-t border-gray-200">
+              <Button 
+                onClick={handleAcceptAllHabits}
+                className="flex-1 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700"
+              >
+                <Check className="w-4 h-4 mr-2" />
+                Принять план целиком
+              </Button>
+              <Button 
+                onClick={handleAcceptSelectedHabits}
+                disabled={selectedHabits.length === 0}
+                className="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 disabled:opacity-50"
+              >
+                <Zap className="w-4 h-4 mr-2" />
+                Выбрать привычки вручную ({selectedHabits.length})
               </Button>
             </div>
           </motion.div>

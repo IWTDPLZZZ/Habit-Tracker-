@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { Target, Menu, X, UserPlus, BarChart3, Users, Calendar, Flame, Sun, Moon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 const LandingPage = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const navigate = useNavigate()
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen)
@@ -52,17 +53,13 @@ const LandingPage = () => {
                 Контакты
               </a>
               <div className="flex items-center gap-3">
-                <Button variant="outline" size="sm" asChild>
-                  <Link to="/habits">
-                    <Target className="w-4 h-4 mr-2" />
-                    Мои привычки
-                  </Link>
+                <Button variant="outline" size="sm" onClick={() => navigate('/habits')}>
+                  <Target className="w-4 h-4 mr-2" />
+                  Мои привычки
                 </Button>
-                <Button size="sm" asChild>
-                  <Link to="/coach">
-                    <UserPlus className="w-4 h-4 mr-2" />
-                    Помощь ИИ
-                  </Link>
+                <Button size="sm" onClick={() => navigate('/coach')}>
+                  <UserPlus className="w-4 h-4 mr-2" />
+                  Помощь ИИ
                 </Button>
               </div>
             </div>
@@ -114,17 +111,13 @@ const LandingPage = () => {
                 Контакты
               </a>
               <div className="flex flex-col gap-3 pt-4">
-                <Button variant="outline" size="sm" className="w-full" asChild>
-                  <Link to="/habits">
-                    <Target className="w-4 h-4 mr-2" />
-                    Мои привычки
-                  </Link>
+                <Button variant="outline" size="sm" className="w-full" onClick={() => navigate('/habits')}>
+                  <Target className="w-4 h-4 mr-2" />
+                  Мои привычки
                 </Button>
-                <Button size="sm" className="w-full" asChild>
-                  <Link to="/coach">
-                    <UserPlus className="w-4 h-4 mr-2" />
-                    Помощь ИИ
-                  </Link>
+                <Button size="sm" className="w-full" onClick={() => navigate('/coach')}>
+                  <UserPlus className="w-4 h-4 mr-2" />
+                  Помощь ИИ
                 </Button>
               </div>
             </div>
@@ -190,17 +183,13 @@ const LandingPage = () => {
               transition={{ duration: 0.5, delay: 0.8 }}
             >
               <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Button size="lg" className="text-lg px-8 py-6" asChild>
-                  <Link to="/app">
-                    Начать отслеживание привычек
-                  </Link>
+                <Button size="lg" className="text-lg px-8 py-6" onClick={() => navigate('/app')}>
+                  Начать отслеживание привычек
                 </Button>
               </motion.div>
               <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Button variant="outline" size="lg" className="text-lg px-8 py-6" asChild>
-                  <Link to="/coach">
-                    Помощь ИИ
-                  </Link>
+                <Button variant="outline" size="lg" className="text-lg px-8 py-6" onClick={() => navigate('/coach')}>
+                  Помощь ИИ
                 </Button>
               </motion.div>
             </motion.div>

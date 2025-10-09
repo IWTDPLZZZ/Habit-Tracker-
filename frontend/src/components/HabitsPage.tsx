@@ -1,8 +1,19 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Plus, Check, X, Target, Calendar, Minus, User, Lightbulb, Heart, Activity, Sun, Moon, Menu, ThumbsUp, Clock, ToggleLeft, ToggleRight } from 'lucide-react'
+import { Plus, Check, X, Target, Calendar, Minus, User, Lightbulb, Heart, Activity, Sun, Moon, Menu, ThumbsUp, Clock, ToggleLeft, ToggleRight, Trophy, Star } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import HabitForm from './HabitForm'
+import GoalsSection from './GoalsSection'
+import { ToastContainer } from '@/components/ui/toast'
+import { 
+  addPoints, 
+  checkAchievementConditions, 
+  addAchievement, 
+  getUserProfile,
+  addHabitCompletion 
+} from '@/utils/gamification'
+import type { ToastNotification } from '@/types/gamification'
 
 interface Habit {
   id: string
@@ -19,6 +30,9 @@ interface Habit {
 
 const HabitsPage = () => {
   const [habits, setHabits] = useState<Habit[]>([])
+  const [userProfile, setUserProfile] = useState(getUserProfile())
+  const [notifications, setNotifications] = useState<ToastNotification[]>([])
+  const [activeTab, setActiveTab] = useState<'habits' | 'goals'>('habits')
   
   useEffect(() => {
     const storedHabits = localStorage.getItem('habits')
@@ -88,6 +102,10 @@ const HabitsPage = () => {
 
 
   const toggleHabit = (id: string) => {
+    const habit = habits.find(h => h.id === id)
+    if (!habit) return
+
+    const wasCompleted = habit.completed
     const updatedHabits = habits.map(habit => 
       habit.id === id 
         ? { ...habit, completed: !habit.completed, streak: habit.completed ? habit.streak - 1 : habit.streak + 1 }
@@ -95,6 +113,41 @@ const HabitsPage = () => {
     )
     setHabits(updatedHabits)
     localStorage.setItem('habits', JSON.stringify(updatedHabits))
+
+    if (!wasCompleted) {
+      const updatedProfile = addPoints(10)
+      setUserProfile(updatedProfile)
+
+      addHabitCompletion(id, 10)
+
+      const newAchievements = checkAchievementConditions(updatedProfile, id)
+      
+      newAchievements.forEach(achievement => {
+        addAchievement(achievement)
+        
+        const notification: ToastNotification = {
+          id: Date.now().toString(),
+          type: 'achievement',
+          title: '🎉 Новое достижение!',
+          message: `Получено достижение "${achievement.title}"`,
+          icon: achievement.icon,
+          points: achievement.points,
+          achievement: achievement
+        }
+        
+        setNotifications(prev => [...prev, notification])
+      })
+
+      const pointsNotification: ToastNotification = {
+        id: (Date.now() + 1).toString(),
+        type: 'points',
+        title: '⭐ Очки получены!',
+        message: `+10 очков за выполнение "${habit.name}"`,
+        points: 10
+      }
+      
+      setNotifications(prev => [...prev, pointsNotification])
+    }
   }
 
   const addHabit = () => {
@@ -152,6 +205,10 @@ const HabitsPage = () => {
     localStorage.setItem('habits', JSON.stringify(updatedHabits))
   }
 
+  const removeNotification = (id: string) => {
+    setNotifications(prev => prev.filter(n => n.id !== id))
+  }
+
 
 
   return (
@@ -163,14 +220,46 @@ const HabitsPage = () => {
         transition={{ duration: 0.5 }}
       >
         <div className="p-6 border-b border-gray-700">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 bg-gray-600 rounded-full flex items-center justify-center">
               <User className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-semibold">Влвььвьвл Квллыдыды</h3>
-              <p className="text-sm text-gray-400">User</p>
+              <h3 className="font-semibold">{userProfile.name}</h3>
+              <p className="text-sm text-gray-400">Уровень {userProfile.level}</p>
             </div>
+          </div>
+          
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Star className="w-4 h-4 text-yellow-400" />
+                <span className="text-sm text-gray-300">Очки</span>
+              </div>
+              <span className="text-sm font-semibold text-white">
+                {userProfile.points.toLocaleString()}
+              </span>
+            </div>
+            
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Trophy className="w-4 h-4 text-yellow-400" />
+                <span className="text-sm text-gray-300">Достижения</span>
+              </div>
+              <span className="text-sm font-semibold text-white">
+                {userProfile.achievements.length}
+              </span>
+            </div>
+            
+            <div className="w-full bg-gray-600 rounded-full h-2">
+              <div 
+                className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all duration-300"
+                style={{ width: `${(userProfile.points % 1000) / 10}%` }}
+              />
+            </div>
+            <p className="text-xs text-gray-400 text-center">
+              {1000 - (userProfile.points % 1000)} до следующего уровня
+            </p>
           </div>
         </div>
 
@@ -180,11 +269,35 @@ const HabitsPage = () => {
 
           <div>
             <h4 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-3">
-              Все Привычки
+              ВСЕ ПРИВЫЧКИ
             </h4>
-            <div className="flex items-center gap-2 text-gray-300 hover:text-white cursor-pointer">
-              <Target className="w-4 h-4" />
-              <span>Все Привычки</span>
+            <div className="space-y-2">
+              <div 
+                className={`flex items-center gap-2 cursor-pointer transition-colors ${
+                  activeTab === 'habits' 
+                    ? 'text-white bg-gray-700 rounded-lg px-3 py-2' 
+                    : 'text-gray-300 hover:text-white'
+                }`}
+                onClick={() => setActiveTab('habits')}
+              >
+                <Target className="w-4 h-4" />
+                <span>Все Привычки</span>
+              </div>
+              <div 
+                className={`flex items-center gap-2 cursor-pointer transition-colors ${
+                  activeTab === 'goals' 
+                    ? 'text-white bg-gray-700 rounded-lg px-3 py-2' 
+                    : 'text-gray-300 hover:text-white'
+                }`}
+                onClick={() => setActiveTab('goals')}
+              >
+                <Target className="w-4 h-4" />
+                <span>Цели</span>
+              </div>
+              <Link to="/achievements" className="flex items-center gap-2 text-gray-300 hover:text-white cursor-pointer">
+                <Trophy className="w-4 h-4" />
+                <span>Достижения</span>
+              </Link>
             </div>
           </div>
 
@@ -236,11 +349,16 @@ const HabitsPage = () => {
 
         <div className="p-6 border-t border-gray-700">
           <Button 
-            onClick={() => setShowAddForm(true)}
+            onClick={() => {
+              if (activeTab === 'habits') {
+                setShowAddForm(true)
+              } else {
+              }
+            }}
             className="w-full bg-blue-600 hover:bg-blue-700 text-white"
           >
             <Plus className="w-4 h-4 mr-2" />
-            + Добавить привычку
+            {activeTab === 'habits' ? '+ Добавить привычку' : '+ Добавить цель'}
           </Button>
         </div>
       </motion.div>
@@ -272,7 +390,11 @@ const HabitsPage = () => {
         </motion.header>
 
         <div className="flex-1 p-8">
-          {habits.length === 0 ? (
+          {activeTab === 'goals' ? (
+            <GoalsSection onGoalUpdate={() => {
+              setUserProfile(getUserProfile())
+            }} />
+          ) : habits.length === 0 ? (
             <motion.div 
               className="text-center py-12"
               initial={{ opacity: 0 }}
@@ -414,25 +536,27 @@ const HabitsPage = () => {
           )}
           </div>
           
-        <div className="bg-white border-t border-gray-200 p-4">
-          <div className="flex items-center justify-between">
-            <span className="text-gray-600">Nothing selected</span>
-            <div className="flex items-center gap-3">
-              <Button variant="outline" size="sm">
-                <Check className="w-4 h-4 mr-2" />
-                Закончить
-              </Button>
-              <Button variant="outline" size="sm">
-                <Activity className="w-4 h-4 mr-2" />
-                → Пропустить
-              </Button>
-              <Button variant="outline" size="sm" className="text-red-500 hover:text-red-700">
-                <X className="w-4 h-4 mr-2" />
-                Х Неудача
-              </Button>
+        {activeTab === 'habits' && (
+          <div className="bg-white border-t border-gray-200 p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-gray-600">Nothing selected</span>
+              <div className="flex items-center gap-3">
+                <Button variant="outline" size="sm">
+                  <Check className="w-4 h-4 mr-2" />
+                  Закончить
+                </Button>
+                <Button variant="outline" size="sm">
+                  <Activity className="w-4 h-4 mr-2" />
+                  → Пропустить
+                </Button>
+                <Button variant="outline" size="sm" className="text-red-500 hover:text-red-700">
+                  <X className="w-4 h-4 mr-2" />
+                  Х Неудача
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
 
         {showAddForm && (
@@ -604,6 +728,11 @@ const HabitsPage = () => {
         onSave={handleSaveHabit}
         initialName={selectedHabitName}
         habitType={habitType || 'good'}
+      />
+
+      <ToastContainer 
+        notifications={notifications}
+        onRemoveNotification={removeNotification}
       />
     </div>
   )

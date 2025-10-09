@@ -1,21 +1,34 @@
+name: habit-tracker
+
 services:
   backend:
     build:
       context: ./backend
+      dockerfile: Dockerfile
+    container_name: habit-tracker-backend
     ports:
       - "8000:8000"
-    volumes:
-      - ./backend:/app
+    environment:
+      - PYTHONUNBUFFERED=1
+    networks:
+      - habit-tracker-network
+    restart: unless-stopped
+
   frontend:
     build:
       context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=http://backend:8000
+    container_name: habit-tracker-frontend
     ports:
       - "3000:80"
-    environment:
-      - VITE_API_URL=http://localhost:8000
     depends_on:
       - backend
+    networks:
+      - habit-tracker-network
+    restart: unless-stopped
 
-name: habit-tracker
-
-
+networks:
+  habit-tracker-network:
+    driver: bridge

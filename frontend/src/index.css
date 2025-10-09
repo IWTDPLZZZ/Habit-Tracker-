@@ -6,21 +6,47 @@
   --background: 0 0% 100%;
   --foreground: 240 10% 3.9%;
   --card: 0 0% 100%;
+  --card-foreground: 240 10% 3.9%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 240 10% 3.9%;
   --primary: 221 83% 53%;
   --primary-foreground: 210 40% 98%;
+  --secondary: 240 4.8% 95.9%;
+  --secondary-foreground: 240 5.9% 10%;
   --muted: 240 4.8% 95.9%;
+  --muted-foreground: 240 3.8% 46.1%;
+  --accent: 240 4.8% 95.9%;
+  --accent-foreground: 240 5.9% 10%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 240 5.9% 90%;
+  --input: 240 5.9% 90%;
+  --ring: 221 83% 53%;
+  --radius: 0.5rem;
 }
 
 .dark {
   --background: 240 10% 3.9%;
   --foreground: 0 0% 98%;
   --card: 240 10% 6%;
+  --card-foreground: 0 0% 98%;
+  --popover: 240 10% 6%;
+  --popover-foreground: 0 0% 98%;
   --primary: 221 83% 53%;
   --primary-foreground: 210 40% 98%;
+  --secondary: 240 3.7% 15.9%;
+  --secondary-foreground: 0 0% 98%;
   --muted: 240 3.7% 15.9%;
+  --muted-foreground: 240 5% 64.9%;
+  --accent: 240 3.7% 15.9%;
+  --accent-foreground: 0 0% 98%;
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 240 3.7% 15.9%;
+  --input: 240 3.7% 15.9%;
+  --ring: 221 83% 53%;
 }
 
-/* Animated Gradient Background */
 .animated-gradient {
   background: linear-gradient(-45deg, #667eea, #764ba2, #f093fb, #f5576c, #4facfe, #00f2fe);
   background-size: 400% 400%;
@@ -39,7 +65,6 @@
   }
 }
 
-/* Glassmorphism Effect */
 .glassmorphism {
   background: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(10px);
@@ -56,7 +81,6 @@
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
 }
 
-/* Enhanced card styles with glassmorphism */
 .glass-card {
   background: rgba(255, 255, 255, 0.15);
   backdrop-filter: blur(20px);
@@ -86,7 +110,6 @@ body {
   background-attachment: fixed;
 }
 
-/* Mobile optimizations */
 @media (max-width: 768px) {
   body {
     background-size: 300% 300%;
@@ -111,7 +134,6 @@ body {
   @apply inline-flex items-center justify-center rounded-full bg-primary text-primary-foreground px-5 py-2 font-medium shadow-soft transition-all duration-300 hover:opacity-90 hover:shadow-lg hover:scale-105 active:scale-95;
 }
 
-/* Custom animations */
 @keyframes float {
   0%, 100% { transform: translateY(0px); }
   50% { transform: translateY(-10px); }
@@ -139,12 +161,10 @@ body {
   animation: shimmer 2s infinite;
 }
 
-/* Smooth scroll behavior */
 html {
   scroll-behavior: smooth;
 }
 
-/* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
 }
@@ -162,12 +182,10 @@ html {
   background: rgba(255, 255, 255, 0.5);
 }
 
-/* Enhanced text readability */
 .text-enhanced {
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
-/* Responsive glassmorphism adjustments */
 @media (max-width: 768px) {
   .glass-card {
     backdrop-filter: blur(15px);
@@ -180,7 +198,6 @@ html {
   }
 }
 
-/* Dark mode support for glassmorphism */
 @media (prefers-color-scheme: dark) {
   .glass-card {
     background: rgba(0, 0, 0, 0.2);
